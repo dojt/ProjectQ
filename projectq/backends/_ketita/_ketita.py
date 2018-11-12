@@ -200,7 +200,15 @@ class KetitaBackend(BasicEngine):
         Args:
             cmd: Command to store
         """
-        print("hi")
+        if self._clear:
+            self._probabilities = dict()
+            self._clear = False
+            self.qasm = ""
+            self._allocated_qubits = set()
+
+        gate = cmd.gate
+
+        
 
     def _logical_to_physical(self, qb_id):
         """
