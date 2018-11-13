@@ -56,6 +56,10 @@ class HGate(SelfInverseGate):
     def matrix(self):
         return 1. / cmath.sqrt(2.) * np.matrix([[1, 1], [1, -1]])
 
+    @property
+    def params(self):
+        return np.array([math.pi/math.sqrt(2), 0.0, math.pi/math.sqrt(2)])
+
 #: Shortcut (instance of) :class:`projectq.ops.HGate`
 H = HGate()
 
@@ -68,6 +72,10 @@ class XGate(SelfInverseGate):
     @property
     def matrix(self):
         return np.matrix([[0, 1], [1, 0]])
+
+    @property
+    def params(self):
+        return np.array([math.pi, 0.0, 0.0])
 
 #: Shortcut (instance of) :class:`projectq.ops.XGate`
 X = NOT = XGate()
@@ -82,6 +90,10 @@ class YGate(SelfInverseGate):
     def matrix(self):
         return np.matrix([[0, -1j], [1j, 0]])
 
+    @property
+    def params(self):
+        return np.array([0.0, 1.0, 0.0])
+
 #: Shortcut (instance of) :class:`projectq.ops.YGate`
 Y = YGate()
 
@@ -95,6 +107,9 @@ class ZGate(SelfInverseGate):
     def matrix(self):
         return np.matrix([[1, 0], [0, -1]])
 
+    @property
+    def params(self):
+        return np.array([0.0, 0.0, 1.0])
 #: Shortcut (instance of) :class:`projectq.ops.ZGate`
 Z = ZGate()
 
@@ -104,6 +119,10 @@ class SGate(BasicGate):
     @property
     def matrix(self):
         return np.matrix([[1, 0], [0, 1j]])
+
+    @property
+    def params(self):
+        return np.array([0.0, 0.0, math.exp(math.pi/2)])
 
     def __str__(self):
         return "S"
@@ -120,6 +139,10 @@ class TGate(BasicGate):
     def matrix(self):
         return np.matrix([[1, 0], [0, cmath.exp(1j * cmath.pi / 4)]])
 
+    @property
+    def params(self):
+        return np.array([0.0, 0.0, math.exp(math.pi/4)])
+
     def __str__(self):
         return "T"
 
@@ -134,6 +157,10 @@ class SqrtXGate(BasicGate):
     @property
     def matrix(self):
         return 0.5 * np.matrix([[1+1j, 1-1j], [1-1j, 1+1j]])
+
+    @property
+    def params(self):
+        return np.array([math.sqrt(math.pi), 0.0, 0.0])
 
     def tex_str(self):
         return r'$\sqrt{X}$'
@@ -215,6 +242,10 @@ class Rx(BasicRotationGate):
                           [-1j * math.sin(0.5 * self.angle),
                            math.cos(0.5 * self.angle)]])
 
+    @property
+    def params:
+        return np.array([self.angle, 0.0, 0.0])
+
 
 class Ry(BasicRotationGate):
     """ RotationX gate class """
@@ -225,6 +256,9 @@ class Ry(BasicRotationGate):
                           [math.sin(0.5 * self.angle),
                            math.cos(0.5 * self.angle)]])
 
+    @property
+    def params:
+        return np.array([0.0, self.angle, 0.0])
 
 class Rz(BasicRotationGate):
     """ RotationZ gate class """
@@ -233,6 +267,9 @@ class Rz(BasicRotationGate):
         return np.matrix([[cmath.exp(-.5 * 1j * self.angle), 0],
                           [0, cmath.exp(.5 * 1j * self.angle)]])
 
+    @property
+    def params:
+        return np.array([0.0, 0.0, self.angle])
 
 class R(BasicPhaseGate):
     """ Phase-shift gate (equivalent to Rz up to a global phase) """
