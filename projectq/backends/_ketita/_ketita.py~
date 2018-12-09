@@ -1,112 +1,14 @@
-import ctypes
-libc = ctypes.CDLL("/home/bahman/Documents/below.jl/C/libketita_below.so")
-
-class fl(ctypes.Structure):
-	pass
-
-class prg(ctypes.Structure):
-	pass
-
-fl._fields_ = [("fn", ctypes.c_char_p), ("bp", prg * 7)]
-
-prg._fields_ = [("n_angels", ctypes.c_uint ), 
-		("n_freturns", ctypes.c_uint), 
-		("angel_sz", ctypes.c_uint * 8), 
-		("angel", ctypes.c_double * 8), 
-		("freturn_sz", ctypes.c_uint * 8), 
-		("freturn_nm", ctypes.c_char_p * 8), 
- 		("callback", ctypes.CFUNCTYPE(ctypes.c_double, 
-					ctypes.c_double) * 8 ), 
-		("data", ctypes.c_void_p * 8)]
- 
-def wrap_function(lib, funcname, restype, argtypes):
-	func = lib.__getattr__(funcname)
-	func.restype = restype
-	func.argtypes = argtypes
-	return func
-
-__load = wrap_function(libc, "ketita_below__load", 
-                        ctypes.POINTER(fl), [ctypes.c_char_p])
-
-
-__get = wrap_function(libc, "ketita_below__get_prog", 
-			ctypes.POINTER(prg), [ctypes.POINTER(fl), ctypes.c_char_p])
-
-__help_file = wrap_function(libc, "ketita_below__help_file",
-                                None, [ctypes.POINTER(fl)])
-
-__help_prog = wrap_function(libc, "ketita_below__help_prog",
-                                None, [ctypes.POINTER(prg)])
-
-__free = wrap_function(libc, "ketita_below__free",
-                                None, [ctypes.POINTER(fl)])
-
-__free_prog = wrap_function(libc, "ketita_below__free_prog",
-                                None, [ctypes.POINTER(prg)])
-
-__set_angel_vec = wrap_function(libc, "ketita_below__set_angel_vec",
-                                ctypes.c_int,[ctypes.POINTER(prg),
-                                ctypes.c_uint, ctypes.POINTER(ctypes.c_double)])
-
-__set_freturn = wrap_function(libc, "ketita_below__set_freturn_callback",
-                                        ctypes.c_int, [ctypes.POINTER(prg),
-                                        ctypes.c_uint, 
-                                        ctypes.CFUNCTYPE(ctypes.c_double,
-                                        ctypes.POINTER(ctypes.c_void_p), 
-                                        ctypes.c_ulonglong), 
-                                        ctypes.c_void_p])
-
-__run_prog = wrap_function(libc, "ketita_below__run_prog",
-                                None, [ctypes.POINTER(prg),
-                                        ctypes.c_ulong,
-                                        ctypes.POINTER(
-                                                ctypes.POINTER(ctypes.c_double))])
-
-def blw_free(bf):
-        __free(bf)
-
-def blw_load(filename = "dummy"):
-        c_name = ctypes.c_char_p(str.encode(filename))
-        bf = __load(c_name)
-        return bf
-
-def blw_help_file(bf):
-        __help_file(bf)
-
-def blw_get_prog(bf, prog_name = "blah"):
-        prg_name = ctypes.c_char_p(str.encode(prog_name))
-        this_prg = __get(bf, prg_name)
-        return this_prg
-
-def blw_free_prog(prg):
-        __free_prog(prg)
-
-def blw_help_prog(tmp_prg):
-        __help_prog(tmp_prg)
-
-def blw_setup_prog(p, angels, freturns):
-        n_angels = len(angels)
-        n_freturns = len(freturns)
-        for i in range(n_angels):
-                __set_angel_vec(p, i, angels[i])
-        for i in range(n_freturns):
-                __set_freturn(p, i , freturns[i], None)
-
-def blw_run_prog(p, iter, expvals):
-        __run_prog(p, iter, expvals)
-
-#bf = load_file("edaf")
-#help_file(bf)
-#blah = get_prog(bf, "f")
-#help_prog(blah)
-
-
+from ._ketita_inter import *
+import random
+import json
+import math
 from projectq.cengines import BasicEngine
 from projectq.meta import get_control_count, LogicalQubitIDTag
 from projectq.ops import (NOT,
                           Y,
                           Z,
                           T,
+                          Swap,
                           Tdag,
                           S,
                           Sdag,
@@ -159,7 +61,7 @@ class KetitaBackend(BasicEngine):
         self._user = user
         self._password = password
         self._probabilities = dict()
-        self.qasm = ""
+        self.blw = ""
         self._measured_ids = []
         self._allocated_qubits = set()
         self._retrieve_execution = retrieve_execution
@@ -200,7 +102,65 @@ class KetitaBackend(BasicEngine):
         Args:
             cmd: Command to store
         """
-        print("hi")
+        if self._clear:
+            self._probabilities = dict()
+            self._clear = False
+            self.blw = ""
+            self.myid = {}
+            self._allocated_qubits = set()
+
+        gate = cmd.gate
+
+        if gate == Allocate:
+            self._allocated_qubits.add(cmd.qubits[0][0].id)
+            logical_id = None
+            for t in cmd.tags:
+                if isinstance(t, LogicalQubitIDTag):
+                    logical_id = t.logical_qubit_id
+                    break
+            #assert logical_id is not None
+            if logical_id != None:
+                self.myid[logical_id] = [cmd.qubits[0][0].id]
+            return
+
+        if gate == Deallocate:
+            return
+
+        if gate == Measure:
+            assert len(cmd.qubits) == 1 and len(cmd.qubits[0]) == 1
+            qb_id = cmd.qubits[0][0].id
+            print("inside id" + str(qb_id))
+            logical_id = None
+            for t in cmd.tags:
+                if isinstance(t, LogicalQubitIDTag):
+                    logical_id = t.logical_qubit_id
+                    break
+            assert logical_id is not None
+            self._measured_ids += [logical_id]
+        elif gate == NOT and get_control_count(cmd) == 1:
+            #print(cmd.control_qubits[0].__str__())
+            #print(cmd.control_qubits)
+            #print(cmd.qubits[0][0].__str__())
+            #print(cmd.qubits)
+            ctrl_pos = cmd.control_qubits[0].id
+            qb_pos = cmd.qubits[0][0].id
+            self.blw += "\ncheaptangle Q#{} Q#{}".format(ctrl_pos, qb_pos)
+        elif gate == Barrier:
+            qb_pos = [qb.id for qr in cmd.qubits for qb in qr]
+            self.blw += "\nBarrier"
+            qb_str = ""
+            for pos in qb_pos:
+                qb_str += "q[{}], ".format(pos)
+            self.blw += qb_str[:-2] + ";"
+        elif gate == Swap:
+            #print(cmd.qubits[0]) 
+            ctrl_pos = cmd.qubits[1][0].id
+            qb_pos = cmd.qubits[0][0].id
+            self.blw += "\nswap Q#{} Q#{}".format(ctrl_pos, qb_pos)
+        else :
+            assert get_control_count(cmd) == 0
+            qb_pos = cmd.qubits[0][0].id
+            self.blw += "\nU1 Q#{} {} {} {}".format(qb_pos, *gate.params)
 
     def _logical_to_physical(self, qb_id):
         """
@@ -261,13 +221,20 @@ class KetitaBackend(BasicEngine):
         """
         Run the circuit.
 
-        Send the circuit via the IBM API (JSON QASM) using the provided user
+        Send the circuit via the IBM API (JSON ) using the provided user
         data / ask for username & password.
         """
-        bf = load_file("edaf")
-        help_file(bf)
-        blah = get_prog(bf, "f")
-        help_prog(blah)
+        print(self.blw)
+        print("idsss")
+        print(self.myid)
+        print("last mapping")
+        print(self.main_engine.mapper.current_mapping)
+        print("meas")
+        print(self._measured_ids)
+        #bf = blw_load("edaf")
+        #blw_help_file(bf)
+        #blah = blw_get_prog(bf, "f")
+        #blw_help_prog(blah)
 
 
         
@@ -279,6 +246,7 @@ class KetitaBackend(BasicEngine):
         Args:
             command_list: List of commands to execute
         """
+        #print(self.main_engine.mapper.current_mapping)
         for cmd in command_list:
             if not cmd.gate == FlushGate():
                 self._store(cmd)

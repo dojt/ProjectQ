@@ -306,7 +306,6 @@ class IBMBackend(BasicEngine):
             if not cmd.gate == FlushGate():
                 self._store(cmd)
             else:
-                print(self.qasm)
                 self._run()
                 self._reset()
 

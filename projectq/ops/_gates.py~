@@ -208,6 +208,11 @@ class SqrtSwapGate(BasicGate):
                           [0, 0.5+0.5j, 0.5-0.5j, 0],
                           [0, 0.5-0.5j, 0.5+0.5j, 0],
                           [0, 0, 0, 1]])
+    @propert
+    def param(self):
+        return np.array([0.0, 0.0, math.pi,
+                         math.pi, 0.0, 0.0, 
+                         0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -math.pi, 0.0])
 
 #: Shortcut (instance of) :class:`projectq.ops.SqrtSwapGate`
 SqrtSwap = SqrtSwapGate()
