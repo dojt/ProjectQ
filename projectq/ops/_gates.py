@@ -80,7 +80,6 @@ class XGate(SelfInverseGate):
 #: Shortcut (instance of) :class:`projectq.ops.XGate`
 X = NOT = XGate()
 
-
 class YGate(SelfInverseGate):
     """ Pauli-Y gate class """
     def __str__(self):
@@ -375,3 +374,15 @@ class BarrierGate(BasicGate):
 
 #: Shortcut (instance of) :class:`projectq.ops.BarrierGate`
 Barrier = BarrierGate()
+
+#: Parameterized gates for Ketita angel stuff
+
+class AROTX_gate(BasicGate):
+    """ Parameterized Rx class """
+    def __str__(self):
+        return "Parameterized_Rx"
+    @property
+    def params(self):
+        return np.array([1.0, 0.0, 0.0])
+    aaaa = 1
+AROTX = AROTX_gate()

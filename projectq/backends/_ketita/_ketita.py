@@ -5,6 +5,7 @@ import math
 from projectq.cengines import BasicEngine
 from projectq.meta import get_control_count, LogicalQubitIDTag
 from projectq.ops import (NOT,
+                          AROTX,
                           Y,
                           Z,
                           T,
@@ -80,11 +81,11 @@ class KetitaBackend(BasicEngine):
         if g == NOT and get_control_count(cmd) <= 1:
             return True
         if get_control_count(cmd) == 0:
-            if g in (T, Tdag, S, Sdag, H, Y, Z):
+            if g in (T, Tdag, S, Sdag, H, Y, Z, AROTX):
                 return True
-            if isinstance(g, (Rx, Ry, Rz)):
+            if isinstance(g, (Rx, Ry, Rz, AROTX)):
                 return True
-        if g in (Measure, Allocate, Deallocate, Barrier):
+        if g in (Measure, Allocate, Deallocate, Barrier, AROTX):
             return True
         return False
 
@@ -157,6 +158,10 @@ class KetitaBackend(BasicEngine):
             ctrl_pos = cmd.qubits[1][0].id
             qb_pos = cmd.qubits[0][0].id
             self.blw += "\nswap Q#{} Q#{}".format(ctrl_pos, qb_pos)
+        elif gate.hasAttr("aaaa"):
+            qb_pos = cmd.qubits[0][0].id
+            self.blw += "\nAROT Q#{} TrAngel(1) {} {} {}".format(qb_pos, 
+                            *gate.params)
         else :
             assert get_control_count(cmd) == 0
             qb_pos = cmd.qubits[0][0].id
