@@ -234,6 +234,14 @@ class Ph(BasicPhaseGate):
 
 class Rx(BasicRotationGate):
     """ RotationX gate class """
+    def __init__(self, angle = math.pi/3,
+                parameterized = False,
+                name = "general"):
+        BasicRotationGate.__init__(self, name,
+                                    angle, 
+                                    parameterized)
+        self.angel_name = name
+
     @property
     def matrix(self):
         return np.matrix([[math.cos(0.5 * self.angle),
@@ -243,11 +251,24 @@ class Rx(BasicRotationGate):
 
     @property
     def params(self):
-        return np.array([self.angle, 0.0, 0.0])
+        if self.parameterized:
+            return np.array([1, 0.0, 0.0])
+        else:
+            return np.array([self.angle, 0.0, 0.0])
 
-
+PRx = Rx(parameterized = True)
+        
 class Ry(BasicRotationGate):
     """ RotationX gate class """
+    def __init__(self,  
+                parameterized,
+                name = "general",
+                angle = math.pi/2):
+        BasicRotationGate.__init__(self, name,
+                                    angle, 
+                                    parameterized)
+        self.angel_name = name
+
     @property
     def matrix(self):
         return np.matrix([[math.cos(0.5 * self.angle),
@@ -257,10 +278,24 @@ class Ry(BasicRotationGate):
 
     @property
     def params(self):
-        return np.array([0.0, self.angle, 0.0])
+        if self.parameterized:
+            return np.array([0.0, 1, 0.0])
+        else:
+            return np.array([0.0, self.angle, 0.0])
+
+PRy = Ry(parameterized = True)
 
 class Rz(BasicRotationGate):
     """ RotationZ gate class """
+    def __init__(self,  
+                parameterized,
+                name = "general",
+                angle = math.pi/2):
+        BasicRotationGate.__init__(self, name,
+                                    angle, 
+                                    parameterized)
+        self.angel_name = name
+
     @property
     def matrix(self):
         return np.matrix([[cmath.exp(-.5 * 1j * self.angle), 0],
@@ -268,7 +303,13 @@ class Rz(BasicRotationGate):
 
     @property
     def params(self):
-        return np.array([0.0, 0.0, self.angle])
+        if self.parameterized:
+            return np.array([0.0, 0.0, 1])
+        else:
+            return np.array([0.0, 0.0, self.angle])
+    
+
+PRz = Rz(parameterized = True)
 
 class R(BasicPhaseGate):
     """ Phase-shift gate (equivalent to Rz up to a global phase) """

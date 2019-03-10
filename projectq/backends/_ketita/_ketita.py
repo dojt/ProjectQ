@@ -5,7 +5,6 @@ import math
 from projectq.cengines import BasicEngine
 from projectq.meta import get_control_count, LogicalQubitIDTag
 from projectq.ops import (NOT,
-                          AROTX,
                           Y,
                           Z,
                           T,
@@ -32,7 +31,8 @@ class KetitaBackend(BasicEngine):
     """
     def __init__(self, use_hardware=False, num_runs=1024, verbose=False,
                  user=None, password=None, device='ibmqx4',
-                 retrieve_execution=None):
+                 retrieve_execution=None,
+                 ketita_options = {}):
         """
         Initialize the Backend object.
 
@@ -66,6 +66,8 @@ class KetitaBackend(BasicEngine):
         self._measured_ids = []
         self._allocated_qubits = set()
         self._retrieve_execution = retrieve_execution
+        self._ketita_options = ketita_options
+        self._Pcounter = {}
 
     def is_available(self, cmd):
         """
@@ -127,10 +129,18 @@ class KetitaBackend(BasicEngine):
         if gate == Deallocate:
             return
 
+        mapping = self.main_engine.mapper.current_mapping
+        qb_poss = cmd.qubits[0][0].id
+        log_id = None
+        for t in mapping:
+            if mapping[t] == qb_poss:
+                log_id = t
+                break
+        #print(gate)
+        #print(log_id)
         if gate == Measure:
             assert len(cmd.qubits) == 1 and len(cmd.qubits[0]) == 1
             qb_id = cmd.qubits[0][0].id
-            print("inside id" + str(qb_id))
             logical_id = None
             for t in cmd.tags:
                 if isinstance(t, LogicalQubitIDTag):
@@ -145,10 +155,10 @@ class KetitaBackend(BasicEngine):
             #print(cmd.qubits)
             ctrl_pos = cmd.control_qubits[0].id
             qb_pos = cmd.qubits[0][0].id
-            self.blw += "\ncheaptangle Q#{} Q#{}".format(ctrl_pos, qb_pos)
+            self.blw += "\nCHEAPENTANGLE Q#{} Q#{}".format(ctrl_pos, qb_pos)
         elif gate == Barrier:
             qb_pos = [qb.id for qr in cmd.qubits for qb in qr]
-            self.blw += "\nBarrier"
+            self.blw += "\nBARRIER"
             qb_str = ""
             for pos in qb_pos:
                 qb_str += "q[{}], ".format(pos)
@@ -157,10 +167,17 @@ class KetitaBackend(BasicEngine):
             #print(cmd.qubits[0]) 
             ctrl_pos = cmd.qubits[1][0].id
             qb_pos = cmd.qubits[0][0].id
-            self.blw += "\nswap Q#{} Q#{}".format(ctrl_pos, qb_pos)
-        elif gate.hasAttr("aaaa"):
+            self.blw += "\nSWAP Q#{} Q#{}".format(ctrl_pos, qb_pos)
+        elif gate.parameterized:
+            if gate.angel_name in self._Pcounter:
+                self._Pcounter[gate.angel_name] += 1
+            else:
+                self._Pcounter[gate.angel_name] = 0
             qb_pos = cmd.qubits[0][0].id
-            self.blw += "\nAROT Q#{} TrAngel(1) {} {} {}".format(qb_pos, 
+            self.blw += "\nAROT Q#{} ({}[{}]) ({}) ({}) ({})".format(
+                            qb_pos,
+                            gate.angel_name,
+                            self._Pcounter[gate.angel_name], 
                             *gate.params)
         else :
             assert get_control_count(cmd) == 0
@@ -224,18 +241,28 @@ class KetitaBackend(BasicEngine):
 
     def _run(self):
         """
-        Run the circuit.
+        Run circuit
 
-        Send the circuit via the IBM API (JSON ) using the provided user
-        data / ask for username & password.
         """
+        __fridge_bit = 0
+        for measured_id in self._measured_ids:
+            qb_loc = self.main_engine.mapper.current_mapping[measured_id]
+            self.blw += "\nMEAS Q#[{}] F#0[{}]".format(qb_loc,
+                                                            __fridge_bit)
+            __fridge_bit += 1
+        angels = "ANGELS "
+        for angel in self._Pcounter:
+            angels += angel + "[{}] ".format(self._Pcounter[angel] + 1)
+        #head = ("\nBELOW_FILE\nPROGRAM ibm_blw\nNQUBITS {nq}\nNFRIDGERES {nq}\nBEGIN").format(nq=max_qubit_id + 1)
         print(self.blw)
-        print("idsss")
-        print(self.myid)
-        print("last mapping")
-        print(self.main_engine.mapper.current_mapping)
-        print("meas")
-        print(self._measured_ids)
+        print(angels)
+        #print("idsss")
+        #print(self.myid)
+        #print("last mapping")
+        #print(self.main_engine.mapper.current_mapping)
+        #print("meas")
+        #print(self._measured_ids)
+        #print(self._Pcounter)
         #bf = blw_load("edaf")
         #blw_help_file(bf)
         #blah = blw_get_prog(bf, "f")

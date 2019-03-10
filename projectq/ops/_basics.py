@@ -275,7 +275,8 @@ class BasicRotationGate(BasicGate):
     The continuous parameter is modulo 4 * pi, self.angle is in the interval
     [0, 4 * pi).
     """
-    def __init__(self, angle):
+    def __init__(self,name, angle = math.pi/3, 
+                parameterized = False):
         """
         Initialize a basic rotation gate.
 
@@ -287,6 +288,9 @@ class BasicRotationGate(BasicGate):
         if rounded_angle > 4 * math.pi - ANGLE_TOLERANCE:
             rounded_angle = 0.
         self.angle = rounded_angle
+        self.parameterized = parameterized
+
+            
 
     def __str__(self):
         """
@@ -339,7 +343,9 @@ class BasicRotationGate(BasicGate):
         Returns:
             New object representing the merged gates.
         """
-        if isinstance(other, self.__class__):
+        if (isinstance(other, self.__class__) and 
+                not self.parameterized and
+                not other.parameterized ):
             return self.__class__(self.angle + other.angle)
         raise NotMergeable("Can't merge different types of rotation gates.")
 
