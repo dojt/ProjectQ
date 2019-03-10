@@ -68,6 +68,7 @@ class KetitaBackend(BasicEngine):
         self._retrieve_execution = retrieve_execution
         self._ketita_options = ketita_options
         self._Pcounter = {}
+        self.is_last_engine = True
 
     def is_available(self, cmd):
         """
@@ -244,18 +245,27 @@ class KetitaBackend(BasicEngine):
         Run circuit
 
         """
+        
         __fridge_bit = 0
         for measured_id in self._measured_ids:
             qb_loc = self.main_engine.mapper.current_mapping[measured_id]
             self.blw += "\nMEAS Q#[{}] F#0[{}]".format(qb_loc,
                                                             __fridge_bit)
             __fridge_bit += 1
+        if self.blw == "":
+            return
+        
+        max_qubit_id = max(self._allocated_qubits)
         angels = "ANGELS "
         for angel in self._Pcounter:
             angels += angel + "[{}] ".format(self._Pcounter[angel] + 1)
-        #head = ("\nBELOW_FILE\nPROGRAM ibm_blw\nNQUBITS {nq}\nNFRIDGERES {nq}\nBEGIN").format(nq=max_qubit_id + 1)
-        print(self.blw)
+        head = "\nBELOW_FILE user should set a name or default is used"
+        head += "\nPROGRAM user should set a name or default is used"
+        head += ("\nNQUBITS {nq}\nNFRIDGERES {nq}\nBEGIN").format(nq=max_qubit_id + 1)
+        print(head)
         print(angels)
+        print(self.blw)
+        
         #print("idsss")
         #print(self.myid)
         #print("last mapping")
@@ -278,7 +288,6 @@ class KetitaBackend(BasicEngine):
         Args:
             command_list: List of commands to execute
         """
-        #print(self.main_engine.mapper.current_mapping)
         for cmd in command_list:
             if not cmd.gate == FlushGate():
                 self._store(cmd)
